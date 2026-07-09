@@ -325,6 +325,14 @@ function cardApproved(p) {
   const note = document.createElement("div");
   note.className = "meta"; note.innerHTML = `✅ Sent to publisher — waiting for LinkedIn`;
   el.appendChild(note);
+  const actions = document.createElement("div");
+  actions.className = "card-actions";
+  actions.append(
+    mkBtn("Edit", "btn-ghost", () => openEditor(p)),
+    mkBtn("Back to review", "btn-ghost", () => rejectPost(p.id)),
+    mkBtn("Delete", "btn-ghost", () => deletePost(p.id)),
+  );
+  el.appendChild(actions);
   return el;
 }
 function cardPosted(p) {
