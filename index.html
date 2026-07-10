@@ -32,8 +32,10 @@
   label.field span { display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px; }
   .input { width:100%; padding:11px 13px; border:1px solid var(--line); border-radius:9px; font-size:14px; background:#fbfcfe; transition:border-color .15s,box-shadow .15s; }
   .input:focus { outline:none; border-color:var(--amber); box-shadow:0 0 0 3px var(--amber-soft); }
+  select.input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%2364748b' stroke-width='1.5' fill='none'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px; }
   .btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:10px 16px; border-radius:9px; font-size:14px; font-weight:600; transition:transform .06s,background .15s,box-shadow .15s; }
   .btn:active { transform:translateY(1px); }
+  .btn:disabled { opacity:.6; cursor:default; }
   .btn-primary { background:var(--navy); color:#fff; width:100%; }
   .btn-primary:hover { background:var(--navy-soft); }
   .btn-amber { background:var(--amber); color:#3a2409; }
@@ -97,10 +99,12 @@
   .modal p.hint { color:var(--muted); font-size:13px; margin-bottom:18px; }
   .modal .row { display:flex; gap:12px; }
   .modal .row > label.field { flex:1; }
+  .auto-note { font-size:11px; color:var(--muted); margin-top:-8px; margin-bottom:14px; font-style:italic; }
   .draft-edit { width:100%; min-height:220px; resize:vertical; border:1px solid var(--line); border-radius:9px; padding:12px; font-size:13.5px; line-height:1.6; background:#fbfcfe; color:var(--ink); white-space:pre-wrap; }
   .draft-edit:focus { outline:none; border-color:var(--amber); box-shadow:0 0 0 3px var(--amber-soft); }
   .modal-actions { display:flex; gap:10px; margin-top:8px; }
   .modal-actions .btn { flex:1; }
+  .flash-line { text-align:center; color:var(--teal); font-size:13px; font-weight:600; min-height:18px; margin-top:10px; }
 
   @media (max-width:1000px) { .board { grid-template-columns:repeat(2,minmax(0,1fr)); } .pipeline { flex-wrap:wrap; } .pipe-stage { flex:1 1 33%; } }
   @media (max-width:560px) { main { padding:16px; } .board { grid-template-columns:1fr; } .pipe-stage { flex:1 1 50%; } .modal .row { flex-direction:column; gap:0; } }
@@ -152,19 +156,28 @@
 <div class="modal-scrim" id="modalScrim">
   <div class="modal">
     <h3 id="m-title">Schedule a post</h3>
-    <p class="hint" id="m-hint">Give the writer a brief. It will draft automatically at the time you set.</p>
-    <label class="field"><span>Topic</span><input class="input" id="m-topic" placeholder="e.g. What is a pack-out?" /></label>
+    <p class="hint" id="m-hint">Pick a topic and a publish date. It drafts right away so you can review it, then publishes automatically at the time you set.</p>
+    <label class="field"><span>Topic</span>
+      <select class="input" id="m-topic-select"></select>
+    </label>
     <div class="row">
-      <label class="field"><span>Angle / post type</span><input class="input" id="m-angle" placeholder="e.g. Educational" /></label>
-      <label class="field"><span>Post at</span><input class="input" type="datetime-local" id="m-when" /></label>
+      <label class="field"><span>Angle / post type</span><input class="input" id="m-angle" /></label>
+      <label class="field"><span>Publish at</span><input class="input" type="datetime-local" id="m-when" /></label>
     </div>
-    <label class="field"><span>Key point to hit</span><textarea class="input" id="m-key" rows="2" placeholder="The one thing this post should get across"></textarea></label>
+    <label class="field"><span>Key point to hit</span><textarea class="input" id="m-key" rows="2"></textarea></label>
+    <div class="auto-note">Angle and key point fill in automatically from the topic — tweak them only if you want.</div>
     <label class="field" id="m-draft-wrap" style="display:none;"><span>Post text</span><textarea class="draft-edit" id="m-draft"></textarea></label>
     <div class="err-msg" id="modalErr"></div>
-    <div class="modal-actions">
+    <div class="modal-actions" id="m-actions-new">
       <button class="btn btn-ghost" id="m-cancel">Cancel</button>
-      <button class="btn btn-primary" id="m-save">Save</button>
+      <button class="btn btn-ghost" id="m-save-another">Schedule &amp; add another</button>
+      <button class="btn btn-primary" id="m-save">Schedule it</button>
     </div>
+    <div class="modal-actions" id="m-actions-edit" style="display:none;">
+      <button class="btn btn-ghost" id="m-cancel2">Cancel</button>
+      <button class="btn btn-primary" id="m-save-edit">Save changes</button>
+    </div>
+    <div class="flash-line" id="m-flash"></div>
   </div>
 </div>
 
@@ -173,12 +186,42 @@
 /* ============================================================
    CONFIG — anon key + URL are safe to be public.
    Never put the service_role key here.
-   The Make.com webhook is NOT set here — it lives in Supabase
-   (Database → Webhooks). See the setup notes.
    ============================================================ */
 const SUPABASE_URL = "https://amvuwoiimfjtlqzxanae.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtdnV3b2lpbWZqdGxxenhhbmFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTQyNzYsImV4cCI6MjA5OTE5MDI3Nn0.OVeQQUX_gmp1lsTMQaObMaDUAwyXdwK2Gx_piiybG2k";
 const GENERATE_FN_URL = SUPABASE_URL + "/functions/v1/generate-post";
+
+/* ============================================================
+   TOPIC LIBRARY — the fixed set you pick from. Reusable.
+   To add/change topics later, edit this list.
+   ============================================================ */
+const TOPICS = [
+  { topic:"Company introduction", angle:"Brand intro", key_point:"Introduce Blue Kangaroo Packoutz and what contents restoration means" },
+  { topic:"What is a pack-out?", angle:"Educational", key_point:"Explain the pack-out / clean / store / pack-back process in plain terms" },
+  { topic:"Myth: smoke damage means items are ruined", angle:"Myth-busting", key_point:"Most textiles, electronics, and documents can often be saved with professional treatment" },
+  { topic:"Behind the scenes on a job", angle:"Behind the scenes", key_point:"Describe the inventory and documentation process crews follow on-site" },
+  { topic:"Why fast contents restoration speeds up claims", angle:"Insurance pro audience", key_point:"Detailed documentation and clear pricing keep claims moving for adjusters and agents" },
+  { topic:"What to do before help arrives", angle:"Homeowner tips", key_point:"A do and don't list for homeowners right after fire or water damage" },
+  { topic:"Team spotlight", angle:"Culture / people", key_point:"Highlight a team member and what their day looks like" },
+  { topic:"Our values", angle:"Values / brand", key_point:"Transparency, speed without shortcuts, and respect for belongings" },
+  { topic:"Cost savings of restoration vs replacement", angle:"Industry stat", key_point:"Restoring salvageable items costs less and is faster than full replacement" },
+  { topic:"Invite to connect", angle:"Community CTA", key_point:"Invite industry peers and homeowners to follow and engage" },
+  { topic:"Common causes of water damage in homes", angle:"Educational", key_point:"Explain frequent causes (pipe bursts, appliance failures, storms) and early warning signs" },
+  { topic:"How documentation protects homeowners", angle:"Insurance pro audience", key_point:"Explain why itemized inventories protect policyholders during claims disputes" },
+  { topic:"Seasonal readiness tips", angle:"Homeowner tips", key_point:"Tips for preparing homes ahead of storm season or winter freeze risk" },
+  { topic:"A day in the life of a project coordinator", angle:"Culture / people", key_point:"Describe coordination between crews, adjusters, and homeowners on a typical job" },
+  { topic:"Why we partner with insurance carriers", angle:"Insurance pro audience", key_point:"Explain the value of a reliable contents restoration partner for carriers" },
+  { topic:"Electronics after water damage", angle:"Educational", key_point:"Explain what can often be saved with corrosion treatment versus what usually can't" },
+  { topic:"Myth: DIY smoke cleanup works fine", angle:"Myth-busting", key_point:"Household cleaners can set smoke damage further; professional treatment is different" },
+  { topic:"How we handle sentimental items", angle:"Customer-focused", key_point:"Explain the extra care taken with photos and heirlooms during a pack-out" },
+  { topic:"Commercial contents restoration", angle:"Educational", key_point:"Explain how pack-out works for offices and businesses, not just homes" },
+  { topic:"Communication during a claim", angle:"Insurance pro audience", key_point:"Explain how proactive status updates reduce adjuster and policyholder frustration" },
+  { topic:"Recognizing a great restoration partner", angle:"Industry insight", key_point:"Traits to look for: documentation quality, communication, turnaround time" },
+  { topic:"Employee appreciation post", angle:"Culture / people", key_point:"Thank the team broadly for their work on a tough week" },
+  { topic:"What happens to items that can't be saved", angle:"Educational", key_point:"Explain the responsible disposal and documentation process for unsalvageable items" },
+  { topic:"Preparing your home inventory before disaster strikes", angle:"Homeowner tips", key_point:"Encourage homeowners to photograph belongings proactively for insurance purposes" },
+  { topic:"Client trust and transparency", angle:"Values / brand", key_point:"Explain how clear pricing and communication build trust during a stressful time" },
+];
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = (id) => document.getElementById(id);
@@ -202,8 +245,27 @@ function showLogin() { appView.style.display = "none"; loginView.style.display =
 async function showApp(session) {
   loginView.style.display = "none"; appView.style.display = "flex";
   $("whoami").textContent = session.user.email;
+  buildTopicOptions();
   await loadPosts(); subscribeRealtime();
 }
+
+/* ---------- Topic dropdown ---------- */
+function buildTopicOptions() {
+  const sel = $("m-topic-select");
+  sel.innerHTML = "";
+  TOPICS.forEach((t, i) => {
+    const o = document.createElement("option");
+    o.value = String(i); o.textContent = t.topic;
+    sel.appendChild(o);
+  });
+}
+$("m-topic-select").addEventListener("change", () => {
+  const i = parseInt($("m-topic-select").value, 10);
+  if (!isNaN(i) && TOPICS[i]) {
+    $("m-angle").value = TOPICS[i].angle;
+    $("m-key").value = TOPICS[i].key_point;
+  }
+});
 
 /* ---------- Data + render ---------- */
 let cache = [];
@@ -255,7 +317,7 @@ function baseCard(p, extraClass = "") {
   el.className = "card " + extraClass;
   el.dataset.id = p.id;
   const angle = p.angle ? `<span class="badge angle">${esc(p.angle)}</span>` : "";
-  el.innerHTML = `<div class="topic">${esc(p.topic)}</div><div class="badges">${angle}</div><div class="meta">🕑 ${fmtWhen(p.scheduled_for)}</div>`;
+  el.innerHTML = `<div class="topic">${esc(p.topic)}</div><div class="badges">${angle}</div><div class="meta">📅 Publish ${fmtWhen(p.scheduled_for)}</div>`;
   return el;
 }
 function mkBtn(label, cls, handler) {
@@ -279,7 +341,7 @@ function cardScheduled(p) {
   const actions = document.createElement("div");
   actions.className = "card-actions";
   actions.append(
-    mkBtn("Generate now", "btn-amber", (ev) => generateNow(p, ev.target)),
+    mkBtn("Generate draft", "btn-amber", (ev) => generateNow(p, ev.target)),
     mkBtn("Edit", "btn-ghost", () => openEditor(p)),
     mkBtn("Delete", "btn-ghost", () => deletePost(p.id)),
   );
@@ -291,12 +353,12 @@ function cardDraft(p) {
   if (p.status === "error") {
     const e = document.createElement("div");
     e.className = "errbox";
-    e.textContent = "Generation failed: " + (p.error_message || "unknown error");
+    e.textContent = (p.error_message || "Something went wrong.");
     el.appendChild(e);
     const actions = document.createElement("div");
     actions.className = "card-actions";
     actions.append(
-      mkBtn("Retry", "btn-ghost", () => retryPost(p.id)),
+      mkBtn("Try draft again", "btn-ghost", (ev) => generateNow(p, ev.target)),
       mkBtn("Edit", "btn-ghost", () => openEditor(p)),
       mkBtn("Delete", "btn-ghost", () => deletePost(p.id)),
     );
@@ -310,9 +372,10 @@ function cardDraft(p) {
   const actions = document.createElement("div");
   actions.className = "card-actions";
   actions.append(
-    mkBtn("Approve &amp; publish", "btn-teal", () => approvePost(p.id)),
+    mkBtn("Approve", "btn-teal", () => approvePost(p.id)),
     mkBtn("Edit", "btn-ghost", () => openEditor(p)),
-    mkBtn("Reject", "btn-ghost", () => rejectPost(p.id)),
+    mkBtn("Regenerate", "btn-ghost", (ev) => generateNow(p, ev.target)),
+    mkBtn("Delete", "btn-ghost", () => deletePost(p.id)),
   );
   el.appendChild(actions);
   return el;
@@ -322,9 +385,15 @@ function cardApproved(p) {
   const box = document.createElement("div");
   box.className = "draft-read"; box.textContent = p.draft_text || "";
   el.appendChild(box);
-  const note = document.createElement("div");
-  note.className = "meta"; note.innerHTML = `✅ Sent to publisher — waiting for LinkedIn`;
-  el.appendChild(note);
+  if (p.error_message) {
+    const e = document.createElement("div");
+    e.className = "errbox"; e.textContent = p.error_message;
+    el.appendChild(e);
+  } else {
+    const note = document.createElement("div");
+    note.className = "meta"; note.innerHTML = `⏳ Publishes automatically at the scheduled time`;
+    el.appendChild(note);
+  }
   const actions = document.createElement("div");
   actions.className = "card-actions";
   actions.append(
@@ -345,50 +414,43 @@ function cardPosted(p) {
   el.appendChild(box);
   return el;
 }
-function flash(btn, msg) {
-  const s = document.createElement("span");
-  s.className = "saved-flash"; s.textContent = msg;
-  btn.parentElement.appendChild(s);
-  setTimeout(() => s.remove(), 1800);
-}
 
 /* ---------- Actions ---------- */
-async function generateNow(p, btn) {
-  btn.textContent = "Starting…"; btn.disabled = true;
+async function triggerGenerate(id) {
   const { data: { session } } = await sb.auth.getSession();
+  const res = await fetch(GENERATE_FN_URL, {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + session.access_token, "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+}
+async function generateNow(p, btn) {
+  const original = btn.textContent;
+  btn.textContent = "Starting…"; btn.disabled = true;
   try {
-    const res = await fetch(GENERATE_FN_URL, {
-      method: "POST",
-      headers: { "Authorization": "Bearer " + session.access_token, "Content-Type": "application/json" },
-      body: JSON.stringify({ id: p.id }),
-    });
-    if (!res.ok) {
-      const t = await res.text();
-      alert("Could not start drafting: " + t);
-      btn.textContent = "Generate now"; btn.disabled = false;
+    // If it already has a draft/other status, move it back to queued first.
+    if (p.status !== "queued") {
+      await sb.from("posts").update({ status: "queued", error_message: null }).eq("id", p.id);
     }
-    // On success, realtime flips the card to "Drafting…" then to the draft.
+    await triggerGenerate(p.id);
   } catch (e) {
-    alert("Could not reach the drafting service. Check your connection and try again.");
-    btn.textContent = "Generate now"; btn.disabled = false;
+    alert("Could not start drafting: " + e.message);
+    btn.textContent = original; btn.disabled = false;
   }
 }
 async function approvePost(id) {
-  const { error } = await sb.from("posts").update({ status: "approved" }).eq("id", id);
+  const { error } = await sb.from("posts").update({ status: "approved", error_message: null }).eq("id", id);
   if (error) alert("Could not approve: " + error.message);
 }
 async function rejectPost(id) {
-  const { error } = await sb.from("posts").update({ status: "queued" }).eq("id", id);
-  if (error) alert("Could not reject: " + error.message);
+  const { error } = await sb.from("posts").update({ status: "draft" }).eq("id", id);
+  if (error) alert("Could not move back: " + error.message);
 }
 async function deletePost(id) {
   if (!confirm("Delete this post?")) return;
   const { error } = await sb.from("posts").delete().eq("id", id);
   if (error) alert("Could not delete: " + error.message);
-}
-async function retryPost(id) {
-  const { error } = await sb.from("posts").update({ status: "queued", error_message: null, scheduled_for: new Date().toISOString() }).eq("id", id);
-  if (error) alert("Could not retry: " + error.message);
 }
 
 /* ---------- Realtime ---------- */
@@ -415,50 +477,98 @@ $("newBtn").addEventListener("click", () => openEditor(null));
 
 function openEditor(p) {
   editingId = p ? p.id : null;
-  $("modalErr").textContent = "";
+  $("modalErr").textContent = ""; $("m-flash").textContent = "";
   $("m-title").textContent = p ? "Edit post" : "Schedule a post";
-  $("m-hint").textContent = p ? "Adjust the brief, the time, or the post text itself." : "Give the writer a brief. It will draft automatically at the time you set.";
-  $("m-topic").value = p ? (p.topic || "") : "";
-  $("m-angle").value = p ? (p.angle || "") : "";
-  $("m-key").value = p ? (p.key_point || "") : "";
-  $("m-when").value = toLocalInput(p ? p.scheduled_for : new Date(Date.now() + 3600000).toISOString());
+  $("m-hint").textContent = p
+    ? "Adjust the topic, the publish time, or the post text itself."
+    : "Pick a topic and a publish date. It drafts right away so you can review it, then publishes automatically at the time you set.";
 
-  // Show the post-text editor only when a draft already exists.
-  const hasDraft = p && p.draft_text;
-  $("m-draft-wrap").style.display = hasDraft ? "block" : "none";
-  $("m-draft").value = hasDraft ? p.draft_text : "";
-
-  $("m-save").textContent = p ? "Save changes" : "Schedule it";
+  if (p) {
+    // Match topic to the library if possible; otherwise keep the stored one selected.
+    const idx = TOPICS.findIndex(t => t.topic === p.topic);
+    if (idx >= 0) { $("m-topic-select").value = String(idx); }
+    else {
+      // add a temporary option for the custom/stored topic
+      buildTopicOptions();
+      const o = document.createElement("option");
+      o.value = "custom"; o.textContent = p.topic; o.selected = true;
+      $("m-topic-select").appendChild(o);
+    }
+    $("m-angle").value = p.angle || "";
+    $("m-key").value = p.key_point || "";
+    $("m-when").value = toLocalInput(p.scheduled_for);
+    const hasDraft = !!p.draft_text;
+    $("m-draft-wrap").style.display = hasDraft ? "block" : "none";
+    $("m-draft").value = hasDraft ? p.draft_text : "";
+    $("m-actions-new").style.display = "none";
+    $("m-actions-edit").style.display = "flex";
+  } else {
+    buildTopicOptions();
+    $("m-topic-select").value = "0";
+    $("m-angle").value = TOPICS[0].angle;
+    $("m-key").value = TOPICS[0].key_point;
+    $("m-when").value = toLocalInput(new Date(Date.now() + 24 * 3600000).toISOString());
+    $("m-draft-wrap").style.display = "none";
+    $("m-draft").value = "";
+    $("m-actions-new").style.display = "flex";
+    $("m-actions-edit").style.display = "none";
+  }
   $("modalScrim").classList.add("open");
 }
-$("m-cancel").addEventListener("click", closeModal);
-$("modalScrim").addEventListener("click", (e) => { if (e.target === $("modalScrim")) closeModal(); });
 function closeModal() { $("modalScrim").classList.remove("open"); editingId = null; }
+$("m-cancel").addEventListener("click", closeModal);
+$("m-cancel2").addEventListener("click", closeModal);
+$("modalScrim").addEventListener("click", (e) => { if (e.target === $("modalScrim")) closeModal(); });
 $("refreshBtn").addEventListener("click", loadPosts);
 
-$("m-save").addEventListener("click", async () => {
-  const topic = $("m-topic").value.trim();
-  if (!topic) { $("modalErr").textContent = "A topic is required."; return; }
+function readModalFields() {
+  const topic = $("m-topic-select").selectedOptions[0]?.textContent?.trim();
   const whenVal = $("m-when").value;
-  const scheduled_for = whenVal ? new Date(whenVal).toISOString() : new Date().toISOString();
-  const fields = {
+  return {
     topic,
     angle: $("m-angle").value.trim() || null,
     key_point: $("m-key").value.trim() || null,
-    scheduled_for,
+    scheduled_for: whenVal ? new Date(whenVal).toISOString() : new Date().toISOString(),
   };
-  if ($("m-draft-wrap").style.display !== "none") {
-    fields.draft_text = $("m-draft").value;
-  }
-  $("m-save").disabled = true;
-  let error;
-  if (editingId) {
-    ({ error } = await sb.from("posts").update(fields).eq("id", editingId));
+}
+
+// Create a new scheduled post, then kick off its draft immediately.
+async function createAndGenerate(keepOpen) {
+  const fields = readModalFields();
+  if (!fields.topic) { $("modalErr").textContent = "Pick a topic."; return; }
+  fields.status = "queued";
+  const btnNew = $("m-save"), btnAnother = $("m-save-another");
+  btnNew.disabled = true; btnAnother.disabled = true;
+  $("modalErr").textContent = ""; $("m-flash").textContent = "";
+  const { data, error } = await sb.from("posts").insert(fields).select().single();
+  if (error) { $("modalErr").textContent = error.message; btnNew.disabled = false; btnAnother.disabled = false; return; }
+  try { await triggerGenerate(data.id); } catch (e) { /* card will show error state */ }
+  btnNew.disabled = false; btnAnother.disabled = false;
+  if (keepOpen) {
+    $("m-flash").textContent = "Scheduled ✓ — drafting. Pick another topic.";
+    // advance the dropdown to the next topic for convenience
+    const cur = parseInt($("m-topic-select").value, 10);
+    if (!isNaN(cur)) {
+      const next = (cur + 1) % TOPICS.length;
+      $("m-topic-select").value = String(next);
+      $("m-angle").value = TOPICS[next].angle;
+      $("m-key").value = TOPICS[next].key_point;
+    }
   } else {
-    fields.status = "queued";
-    ({ error } = await sb.from("posts").insert(fields));
+    closeModal();
   }
-  $("m-save").disabled = false;
+}
+$("m-save").addEventListener("click", () => createAndGenerate(false));
+$("m-save-another").addEventListener("click", () => createAndGenerate(true));
+
+// Save edits to an existing post.
+$("m-save-edit").addEventListener("click", async () => {
+  const fields = readModalFields();
+  if (!fields.topic) { $("modalErr").textContent = "Pick a topic."; return; }
+  if ($("m-draft-wrap").style.display !== "none") fields.draft_text = $("m-draft").value;
+  $("m-save-edit").disabled = true;
+  const { error } = await sb.from("posts").update(fields).eq("id", editingId);
+  $("m-save-edit").disabled = false;
   if (error) { $("modalErr").textContent = error.message; return; }
   closeModal();
 });
