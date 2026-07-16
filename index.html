@@ -105,6 +105,8 @@
   .modal-actions { display:flex; gap:10px; margin-top:8px; }
   .modal-actions .btn { flex:1; }
   .flash-line { text-align:center; color:var(--teal); font-size:13px; font-weight:600; min-height:18px; margin-top:10px; }
+  .card-photo { width:100%; max-height:180px; object-fit:cover; border-radius:9px; margin-bottom:10px; display:block; }
+  input[type=file].input { padding:8px; background:var(--paper); }
 
   @media (max-width:1000px) { .board { grid-template-columns:repeat(2,minmax(0,1fr)); } .pipeline { flex-wrap:wrap; } .pipe-stage { flex:1 1 33%; } }
   @media (max-width:560px) { main { padding:16px; } .board { grid-template-columns:1fr; } .pipe-stage { flex:1 1 50%; } .modal .row { flex-direction:column; gap:0; } }
@@ -166,6 +168,14 @@
     </div>
     <label class="field"><span>Key point to hit</span><textarea class="input" id="m-key" rows="2"></textarea></label>
     <div class="auto-note">Angle and key point fill in automatically from the topic — tweak them only if you want.</div>
+    <label class="field">
+      <span>Photo (optional)</span>
+      <input class="input" type="file" id="m-photo" accept="image/*" />
+    </label>
+    <div id="m-photo-preview-wrap" style="display:none; margin:-6px 0 14px;">
+      <img id="m-photo-preview" style="max-width:100%; max-height:160px; border-radius:9px; display:block; margin-bottom:6px;" />
+      <button class="btn btn-ghost btn-sm" id="m-photo-remove" type="button">Remove photo</button>
+    </div>
     <label class="field" id="m-draft-wrap" style="display:none;"><span>Post text</span><textarea class="draft-edit" id="m-draft"></textarea></label>
     <div class="err-msg" id="modalErr"></div>
     <div class="modal-actions" id="m-actions-new">
@@ -190,6 +200,7 @@
 const SUPABASE_URL = "https://amvuwoiimfjtlqzxanae.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtdnV3b2lpbWZqdGxxenhhbmFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTQyNzYsImV4cCI6MjA5OTE5MDI3Nn0.OVeQQUX_gmp1lsTMQaObMaDUAwyXdwK2Gx_piiybG2k";
 const GENERATE_FN_URL = SUPABASE_URL + "/functions/v1/generate-post";
+const PUBLISH_FN_URL = SUPABASE_URL + "/functions/v1/publish-due";
 
 /* ============================================================
    TOPIC LIBRARY — the fixed set you pick from. Reusable.
@@ -317,7 +328,8 @@ function baseCard(p, extraClass = "") {
   el.className = "card " + extraClass;
   el.dataset.id = p.id;
   const angle = p.angle ? `<span class="badge angle">${esc(p.angle)}</span>` : "";
-  el.innerHTML = `<div class="topic">${esc(p.topic)}</div><div class="badges">${angle}</div><div class="meta">📅 Publish ${fmtWhen(p.scheduled_for)}</div>`;
+  const photo = p.image_url ? `<img class="card-photo" src="${esc(p.image_url)}" alt="" />` : "";
+  el.innerHTML = `${photo}<div class="topic">${esc(p.topic)}</div><div class="badges">${angle}</div><div class="meta">📅 Publish ${fmtWhen(p.scheduled_for)}</div>`;
   return el;
 }
 function mkBtn(label, cls, handler) {
@@ -440,8 +452,23 @@ async function generateNow(p, btn) {
   }
 }
 async function approvePost(id) {
+  const post = cache.find(p => p.id === id);
   const { error } = await sb.from("posts").update({ status: "approved", error_message: null }).eq("id", id);
-  if (error) alert("Could not approve: " + error.message);
+  if (error) { alert("Could not approve: " + error.message); return; }
+  // If its publish time has already passed, send it now instead of waiting for the next cron check.
+  if (post && post.scheduled_for && new Date(post.scheduled_for) <= new Date()) {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      await fetch(PUBLISH_FN_URL, {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + session.access_token, "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+    } catch (e) {
+      // Non-fatal — the next cron run (within ~15 min) will catch it as a fallback.
+      console.error("Immediate publish attempt failed, will retry on schedule:", e);
+    }
+  }
 }
 async function rejectPost(id) {
   const { error } = await sb.from("posts").update({ status: "draft" }).eq("id", id);
@@ -497,6 +524,13 @@ function openEditor(p) {
     $("m-angle").value = p.angle || "";
     $("m-key").value = p.key_point || "";
     $("m-when").value = toLocalInput(p.scheduled_for);
+    pendingPhotoFile = null; removeExistingPhoto = false; $("m-photo").value = "";
+    if (p.image_url) {
+      $("m-photo-preview").src = p.image_url;
+      $("m-photo-preview-wrap").style.display = "block";
+    } else {
+      $("m-photo-preview-wrap").style.display = "none";
+    }
     const hasDraft = !!p.draft_text;
     $("m-draft-wrap").style.display = hasDraft ? "block" : "none";
     $("m-draft").value = hasDraft ? p.draft_text : "";
@@ -508,6 +542,8 @@ function openEditor(p) {
     $("m-angle").value = TOPICS[0].angle;
     $("m-key").value = TOPICS[0].key_point;
     $("m-when").value = toLocalInput(new Date(Date.now() + 24 * 3600000).toISOString());
+    pendingPhotoFile = null; removeExistingPhoto = false; $("m-photo").value = "";
+    $("m-photo-preview-wrap").style.display = "none";
     $("m-draft-wrap").style.display = "none";
     $("m-draft").value = "";
     $("m-actions-new").style.display = "flex";
@@ -532,6 +568,40 @@ function readModalFields() {
   };
 }
 
+/* ---------- Photo upload ---------- */
+let pendingPhotoFile = null;   // a newly chosen file, not yet uploaded
+let removeExistingPhoto = false;
+
+$("m-photo").addEventListener("change", () => {
+  const file = $("m-photo").files[0];
+  if (!file) return;
+  pendingPhotoFile = file;
+  removeExistingPhoto = false;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    $("m-photo-preview").src = e.target.result;
+    $("m-photo-preview-wrap").style.display = "block";
+  };
+  reader.readAsDataURL(file);
+});
+$("m-photo-remove").addEventListener("click", () => {
+  pendingPhotoFile = null;
+  removeExistingPhoto = true;
+  $("m-photo").value = "";
+  $("m-photo-preview-wrap").style.display = "none";
+});
+
+// Uploads the chosen file to Supabase Storage and returns its public URL.
+async function uploadPendingPhoto() {
+  if (!pendingPhotoFile) return undefined; // no change
+  const ext = pendingPhotoFile.name.split(".").pop() || "jpg";
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await sb.storage.from("post-images").upload(path, pendingPhotoFile, { upsert: false });
+  if (error) throw new Error("Photo upload failed: " + error.message);
+  const { data } = sb.storage.from("post-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 // Create a new scheduled post, then kick off its draft immediately.
 async function createAndGenerate(keepOpen) {
   const fields = readModalFields();
@@ -540,12 +610,20 @@ async function createAndGenerate(keepOpen) {
   const btnNew = $("m-save"), btnAnother = $("m-save-another");
   btnNew.disabled = true; btnAnother.disabled = true;
   $("modalErr").textContent = ""; $("m-flash").textContent = "";
+  try {
+    const uploadedUrl = await uploadPendingPhoto();
+    if (uploadedUrl !== undefined) fields.image_url = uploadedUrl;
+  } catch (e) {
+    $("modalErr").textContent = e.message; btnNew.disabled = false; btnAnother.disabled = false; return;
+  }
   const { data, error } = await sb.from("posts").insert(fields).select().single();
   if (error) { $("modalErr").textContent = error.message; btnNew.disabled = false; btnAnother.disabled = false; return; }
   try { await triggerGenerate(data.id); } catch (e) { /* card will show error state */ }
   btnNew.disabled = false; btnAnother.disabled = false;
+  pendingPhotoFile = null; removeExistingPhoto = false;
   if (keepOpen) {
     $("m-flash").textContent = "Scheduled ✓ — drafting. Pick another topic.";
+    $("m-photo").value = ""; $("m-photo-preview-wrap").style.display = "none";
     // advance the dropdown to the next topic for convenience
     const cur = parseInt($("m-topic-select").value, 10);
     if (!isNaN(cur)) {
@@ -567,6 +645,13 @@ $("m-save-edit").addEventListener("click", async () => {
   if (!fields.topic) { $("modalErr").textContent = "Pick a topic."; return; }
   if ($("m-draft-wrap").style.display !== "none") fields.draft_text = $("m-draft").value;
   $("m-save-edit").disabled = true;
+  try {
+    const uploadedUrl = await uploadPendingPhoto();
+    if (uploadedUrl !== undefined) fields.image_url = uploadedUrl;
+    else if (removeExistingPhoto) fields.image_url = null;
+  } catch (e) {
+    $("modalErr").textContent = e.message; $("m-save-edit").disabled = false; return;
+  }
   const { error } = await sb.from("posts").update(fields).eq("id", editingId);
   $("m-save-edit").disabled = false;
   if (error) { $("modalErr").textContent = error.message; return; }
