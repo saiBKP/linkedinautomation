@@ -220,18 +220,78 @@ const TOPICS = [
   { topic:"What happens to items that can't be saved", angle:"Educational", key_point:"Explain the responsible disposal and documentation process for unsalvageable items" },
   { topic:"Preparing your home inventory before disaster strikes", angle:"Homeowner tips", key_point:"Encourage homeowners to photograph belongings proactively for insurance purposes" },
   { topic:"Client trust and transparency", angle:"Values / brand", key_point:"Explain how clear pricing and communication build trust during a stressful time" },
+  { topic:"How smoke travels through a home even far from the fire", angle:"Educational", key_point:"Heat and pressure carry soot into rooms untouched by flame, which is why whole-home assessment matters" },
+  { topic:"Why HVAC and ductwork need cleaning after a fire", angle:"Educational", key_point:"Soot recirculates through the system long after visible damage is gone" },
+  { topic:"Odor removal is chemistry, not candles", angle:"Educational", key_point:"Explain in plain terms why masking smoke smell fails and real deodorization requires treating the source" },
+  { topic:"What survives a house fire that people assume is ruined", angle:"Myth-busting", key_point:"Hard surfaces, metal, and many electronics often clean up better than expected" },
+  { topic:"The 24-48 hour mold window", angle:"Educational", key_point:"Why fast water extraction and drying prevents a second, worse problem" },
+  { topic:"Basement flooding: what to save first", angle:"Homeowner tips", key_point:"Prioritization guidance for sump failures or storm flooding" },
+  { topic:"Categories of water damage explained", angle:"Educational", key_point:"Plain-English breakdown of clean/gray/black water and why it changes the response" },
+  { topic:"Why a little bit of water still needs professional drying", angle:"Educational", key_point:"Hidden moisture behind walls or under flooring causes damage weeks later" },
+  { topic:"What actually happens to your things during a pack-out", angle:"Educational", key_point:"Walk through inventory, wrapping, transport, and tracking in plain terms" },
+  { topic:"How items are tracked from your home to storage and back", angle:"Behind the scenes", key_point:"Explain barcode/inventory tracking generically, without overpromising specifics" },
+  { topic:"What pack-back day looks like", angle:"Behind the scenes", key_point:"Describe placement, unpacking, and the final walkthrough" },
+  { topic:"How long does a typical pack-out take?", angle:"Educational", key_point:"Set expectations based on job size and scope factors, not a fixed number" },
+  { topic:"What's covered by insurance vs. what isn't", angle:"Insurance pro audience", key_point:"General guidance encouraging homeowners to confirm specifics with their adjuster" },
+  { topic:"A simple checklist before the crew arrives", angle:"Homeowner tips", key_point:"What homeowners can do to make pack-out day smoother" },
+  { topic:"What makes a restoration company trustworthy", angle:"Values / brand", key_point:"Documentation, communication, and respect for belongings as the real differentiators" },
+  { topic:"Why the cheapest bid isn't always the safest choice", angle:"Industry insight", key_point:"Corners cut in contents handling can cost more later" },
+  { topic:"How we protect against cross-contamination on-site", angle:"Behind the scenes", key_point:"PPE and site protocols that keep unaffected areas unaffected" },
+  { topic:"The unglamorous part of the job nobody sees", angle:"Behind the scenes", key_point:"Detailed documentation and labeling that protects the homeowner later" },
+  { topic:"Why we photograph everything", angle:"Values / brand", key_point:"Photo documentation as protection for both homeowner and insurer" },
+  { topic:"What adjusters wish homeowners knew about contents claims", angle:"Insurance pro audience", key_point:"General friction points and how good documentation reduces them" },
+  { topic:"Turnaround time and claim velocity", angle:"Insurance pro audience", key_point:"How organized contents handling shortens claim cycles" },
+  { topic:"A contents restoration partner's role on a complex loss", angle:"Insurance pro audience", key_point:"Coordination between adjuster, homeowner, and crew" },
+  { topic:"Why itemized documentation prevents disputes", angle:"Insurance pro audience", key_point:"Specificity protects both sides of a claim" },
+  { topic:"Contents restoration for offices", angle:"Commercial", key_point:"Handling electronics, files, and furniture with minimal business disruption" },
+  { topic:"Restaurants and water/fire damage", angle:"Commercial", key_point:"Unique considerations for commercial kitchens and inventory" },
+  { topic:"Retail inventory after a loss", angle:"Commercial", key_point:"How pack-out differs when the contents are sellable stock" },
+  { topic:"Multi-family and apartment complex losses", angle:"Commercial", key_point:"Coordinating multiple units and tenants during a shared-building incident" },
+  { topic:"Why business continuity depends on fast contents response", angle:"Commercial", key_point:"Minimizing downtime after fire or water events" },
+  { topic:"Saving family photos after water damage", angle:"Customer-focused", key_point:"Why photos need different, and fast, handling compared to most items" },
+  { topic:"Electronics and data recovery after water exposure", angle:"Educational", key_point:"What's often salvageable if handled quickly, and what isn't" },
+  { topic:"Artwork and antiques need specialized care", angle:"Customer-focused", key_point:"Why generic cleaning methods can ruin delicate or valuable pieces" },
+  { topic:"Furniture and upholstery after smoke exposure", angle:"Educational", key_point:"Specialty cleaning methods versus a replacement decision" },
+  { topic:"What happens to items that truly can't be saved", angle:"Educational", key_point:"Responsible disposal and documentation for insurance purposes" },
+  { topic:"Preparing for hurricane season", angle:"Homeowner tips", key_point:"Proactive steps homeowners can take before storms hit" },
+  { topic:"Winter freeze and burst pipes", angle:"Homeowner tips", key_point:"Early warning signs and what to do in the first hour" },
+  { topic:"Wildfire smoke damage even without direct fire contact", angle:"Educational", key_point:"How smoke infiltration affects homes far from the fire line" },
+  { topic:"Spring storm season readiness", angle:"Homeowner tips", key_point:"A quick homeowner prep checklist" },
+  { topic:"Why we're licensed, trained, and certified", angle:"Values / brand", key_point:"General credibility around training and certification standards" },
+  { topic:"A day in the life of a pack-out crew lead", angle:"Culture / people", key_point:"Coordination, communication, and problem-solving on-site" },
+  { topic:"Why we hire for empathy, not just skill", angle:"Culture / people", key_point:"The human side of showing up during someone's worst week" },
+  { topic:"Careers at Blue Kangaroo Packoutz", angle:"Careers", key_point:"Invite people who want meaningful, hands-on work to reach out" },
+  { topic:"Community involvement", angle:"Community CTA", key_point:"General framing around giving back locally" },
+  { topic:"Sustainability: donating salvageable items", angle:"Values / brand", key_point:"What happens to belongings that are fine but no longer wanted" },
+  { topic:"A myth about mold everyone believes", angle:"Myth-busting", key_point:"Bleach doesn't kill mold on porous surfaces — explain why" },
+  { topic:"A myth about smell removal", angle:"Myth-busting", key_point:"Air fresheners mask odor, they don't remediate it" },
+  { topic:"The real cost comparison: restore vs. replace", angle:"Industry stat", key_point:"Time and cost tradeoffs explained generically" },
+  { topic:"What to look for in a restoration company", angle:"Industry insight", key_point:"A checklist: documentation, licensing, communication, turnaround" },
+  { topic:"Ask-me-anything style post", angle:"Community CTA", key_point:"Invite questions from homeowners or industry peers about the restoration process" },
+  { topic:"A we're hiring or we're growing milestone post", angle:"Careers", key_point:"Only use when there's a real, current fact to share" },
+  { topic:"An invitation for adjusters and agents to connect", angle:"Insurance pro audience", key_point:"Position the company as a dependable go-to partner" },
 ];
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = (id) => document.getElementById(id);
 
 /* ---------- Topic dropdown ---------- */
+// How many posts (any status, including past ones) already used this exact
+// topic — lets you see at a glance what's fresh vs. already covered.
+function topicUsageCounts() {
+  const counts = {};
+  cache.forEach(p => { counts[p.topic] = (counts[p.topic] || 0) + 1; });
+  return counts;
+}
 function buildTopicOptions() {
   const sel = $("m-topic-select");
   sel.innerHTML = "";
+  const counts = topicUsageCounts();
   TOPICS.forEach((t, i) => {
     const o = document.createElement("option");
-    o.value = String(i); o.textContent = t.topic;
+    const used = counts[t.topic] || 0;
+    o.value = String(i);
+    o.textContent = used > 0 ? `✓ ${t.topic} (used ${used}×)` : t.topic;
     sel.appendChild(o);
   });
 }
