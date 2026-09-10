@@ -724,9 +724,17 @@ $("m-save-edit").addEventListener("click", async () => {
 });
 
 /* ---------- Boot ---------- */
-buildTopicOptions();
-loadPosts();
-subscribeRealtime();
+// If this browser still has a signed-in session cached from before the
+// login screen was removed, supabase-js will silently use it instead of
+// the anon key on every request — and since access is now anon-only, that
+// stale session gets blocked by row-level security. Clear it up front so
+// this page always behaves as the plain, no-login anon client it's meant
+// to be.
+sb.auth.signOut().finally(() => {
+  buildTopicOptions();
+  loadPosts();
+  subscribeRealtime();
+});
 </script>
 </body>
 </html>
